@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     QDRANT_URL: str = "http://localhost:6333"
     QDRANT_API_KEY: str = ""
 
+    EMBEDDING_PROVIDER: str = "fastembed"
+    EMBEDDING_MODEL: str = "BAAI/bge-small-en-v1.5"
+    EMBEDDING_VECTOR_SIZE: int = 384
+
 
 @lru_cache
 def get_settings() -> Settings:

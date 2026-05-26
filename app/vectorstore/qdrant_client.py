@@ -1,15 +1,15 @@
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams
+from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from app.core.config import get_settings
 
-_VECTOR_SIZE = 1536
 _DISTANCE = Distance.COSINE
 
 
 class QdrantCollectionClient:
     def __init__(self) -> None:
         settings = get_settings()
+        self._vector_size = settings.EMBEDDING_VECTOR_SIZE
         self._client = QdrantClient(
             url=settings.QDRANT_URL,
             api_key=settings.QDRANT_API_KEY or None,
@@ -27,7 +27,7 @@ class QdrantCollectionClient:
             }
         self._client.create_collection(
             collection_name=collection_name,
-            vectors_config=VectorParams(size=_VECTOR_SIZE, distance=_DISTANCE),
+            vectors_config=VectorParams(size=self._vector_size, distance=_DISTANCE),
         )
         return {
             "collection_name": collection_name,
@@ -52,3 +52,14 @@ class QdrantCollectionClient:
             "status": "deleted",
             "message": f"Collection '{collection_name}' removida com sucesso.",
         }
+
+    def upsert_chunks(self, collection_name: str, points: list[dict]) -> None:
+        if not self.collection_exists(collection_name):
+            raise ValueError(f"Collection '{collection_name}' não encontrada.")
+        self._client.upsert(
+            collection_name=collection_name,
+            points=[
+                PointStruct(id=p["id"], vector=p["vector"], payload=p["payload"])
+                for p in points
+            ],
+        )

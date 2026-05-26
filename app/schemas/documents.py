@@ -1,3 +1,10 @@
-# Pydantic schemas for document upload and listing payloads.
+from pydantic import BaseModel
 
-# TODO: define DocumentUploadResponse and DocumentListResponse models
+
+class DocumentUploadResponse(BaseModel):
+    document_id: str
+    filename: str
+    collection_name: str
+    chunks: int
+    status: str
+    message: str

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.routes_collections import router as collections_router
+from app.api.routes_documents import router as documents_router
 from app.api.routes_health import router as health_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
@@ -17,3 +18,4 @@ app = FastAPI(
 
 app.include_router(health_router)
 app.include_router(collections_router)
+app.include_router(documents_router)
