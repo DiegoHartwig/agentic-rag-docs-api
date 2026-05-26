@@ -7,4 +7,8 @@ router = APIRouter(prefix="/health", tags=["health"])
 
 @router.get("")
 async def health_check():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "message": "API em execução",
+        "service": "agentic-docs-rag-api",
+    }

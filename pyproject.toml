@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "agentic-docs-rag-api"
 version = "0.1.0"
 description = "Agentic RAG API for document Q&A powered by LangGraph and Qdrant"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.15"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
