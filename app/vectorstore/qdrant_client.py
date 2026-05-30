@@ -53,6 +53,41 @@ class QdrantCollectionClient:
             "message": f"Collection '{collection_name}' removida com sucesso.",
         }
 
+    def list_documents(self, collection_name: str) -> list[dict]:
+        if not self.collection_exists(collection_name):
+            raise ValueError(f"Collection '{collection_name}' não encontrada.")
+
+        docs: dict[str, dict] = {}
+        offset = None
+        while True:
+            records, next_offset = self._client.scroll(
+                collection_name=collection_name,
+                with_payload=True,
+                with_vectors=False,
+                limit=100,
+                offset=offset,
+            )
+            for record in records:
+                payload = record.payload or {}
+                doc_id = payload.get("document_id")
+                if not doc_id:
+                    continue
+                if doc_id not in docs:
+                    docs[doc_id] = {
+                        "document_id": doc_id,
+                        "filename": payload.get("filename", ""),
+                        "collection_name": payload.get("collection_name", collection_name),
+                        "tags": payload.get("tags", []),
+                        "source_type": payload.get("source_type"),
+                        "chunks": 0,
+                    }
+                docs[doc_id]["chunks"] += 1
+            if next_offset is None:
+                break
+            offset = next_offset
+
+        return list(docs.values())
+
     def upsert_chunks(self, collection_name: str, points: list[dict]) -> None:
         if not self.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' não encontrada.")

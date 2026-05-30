@@ -2,16 +2,21 @@ import logging
 import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 
 from app.ingestion.document_service import DocumentIngestionService
 from app.ingestion.embeddings import EmbeddingError
-from app.schemas.documents import DocumentUploadResponse
+from app.schemas.documents import DocumentSummaryResponse, DocumentUploadResponse
+from app.vectorstore.qdrant_client import QdrantCollectionClient
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
+
+
+def _get_qdrant_client() -> QdrantCollectionClient:
+    return QdrantCollectionClient()
 
 
 def _parse_tags(raw: str | None) -> list[str]:
@@ -77,3 +82,22 @@ async def upload_document(
         status="indexed",
         message=f"Documento indexado com sucesso em '{collection_name}'.",
     )
+
+
+@router.get("", response_model=list[DocumentSummaryResponse])
+async def list_documents(
+    collection_name: str = Query(...),
+):
+    try:
+        docs = _get_qdrant_client().list_documents(collection_name)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail="Collection não encontrada.") from e
+    except ResponseHandlingException as e:
+        raise HTTPException(status_code=503, detail="Qdrant indisponível.") from e
+    except UnexpectedResponse as e:
+        raise HTTPException(status_code=503, detail="Qdrant indisponível.") from e
+    except Exception as e:
+        logger.exception("Erro ao listar documentos da collection '%s'", collection_name)
+        raise HTTPException(status_code=500, detail="Erro interno ao listar documentos.") from e
+
+    return [DocumentSummaryResponse(**d) for d in docs]
