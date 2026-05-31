@@ -7,7 +7,11 @@ from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedR
 
 from app.ingestion.document_service import DocumentIngestionService
 from app.ingestion.embeddings import EmbeddingError
-from app.schemas.documents import DocumentSummaryResponse, DocumentUploadResponse
+from app.schemas.documents import (
+    DocumentDeleteResponse,
+    DocumentSummaryResponse,
+    DocumentUploadResponse,
+)
 from app.vectorstore.qdrant_client import QdrantCollectionClient
 
 logger = logging.getLogger(__name__)
@@ -70,7 +74,9 @@ async def upload_document(
         raise HTTPException(status_code=503, detail="Qdrant indisponível.") from e
     except Exception as e:
         logger.exception("Erro inesperado ao processar documento '%s'", filename)
-        raise HTTPException(status_code=500, detail="Erro inesperado ao processar o documento.") from e
+        raise HTTPException(
+            status_code=500, detail="Erro inesperado ao processar o documento."
+        ) from e
     finally:
         Path(tmp.name).unlink(missing_ok=True)
 
@@ -101,3 +107,34 @@ async def list_documents(
         raise HTTPException(status_code=500, detail="Erro interno ao listar documentos.") from e
 
     return [DocumentSummaryResponse(**d) for d in docs]
+
+
+@router.delete("/{document_id}", response_model=DocumentDeleteResponse)
+async def delete_document(
+    document_id: str,
+    collection_name: str = Query(...),
+):
+    try:
+        deleted = _get_qdrant_client().delete_document(collection_name, document_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail="Collection não encontrada.") from e
+    except LookupError as e:
+        raise HTTPException(
+            status_code=404, detail="Documento não encontrado na collection informada."
+        ) from e
+    except ResponseHandlingException as e:
+        raise HTTPException(status_code=503, detail="Qdrant indisponível.") from e
+    except UnexpectedResponse as e:
+        raise HTTPException(status_code=503, detail="Qdrant indisponível.") from e
+    except Exception as e:
+        logger.exception(
+            "Erro ao remover documento '%s' da collection '%s'", document_id, collection_name
+        )
+        raise HTTPException(status_code=500, detail="Erro interno ao remover documento.") from e
+
+    return DocumentDeleteResponse(
+        document_id=document_id,
+        collection_name=collection_name,
+        deleted_chunks=deleted,
+        message="Documento removido com sucesso.",
+    )

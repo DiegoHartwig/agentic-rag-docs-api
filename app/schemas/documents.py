@@ -17,3 +17,10 @@ class DocumentSummaryResponse(BaseModel):
     chunks: int
     tags: list[str] = []
     source_type: str | None = None
+
+
+class DocumentDeleteResponse(BaseModel):
+    document_id: str
+    collection_name: str
+    deleted_chunks: int
+    message: str

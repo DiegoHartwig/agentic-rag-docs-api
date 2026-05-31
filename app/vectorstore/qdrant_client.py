@@ -1,5 +1,12 @@
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, PointStruct, VectorParams
+from qdrant_client.models import (
+    Distance,
+    FieldCondition,
+    Filter,
+    MatchValue,
+    PointStruct,
+    VectorParams,
+)
 
 from app.core.config import get_settings
 
@@ -88,13 +95,47 @@ class QdrantCollectionClient:
 
         return list(docs.values())
 
+    def delete_document(self, collection_name: str, document_id: str) -> int:
+        if not self.collection_exists(collection_name):
+            raise ValueError(f"Collection '{collection_name}' não encontrada.")
+
+        doc_filter = Filter(
+            must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))]
+        )
+
+        point_ids: list = []
+        offset = None
+        while True:
+            records, next_offset = self._client.scroll(
+                collection_name=collection_name,
+                scroll_filter=doc_filter,
+                with_payload=False,
+                with_vectors=False,
+                limit=100,
+                offset=offset,
+            )
+            point_ids.extend(r.id for r in records)
+            if next_offset is None:
+                break
+            offset = next_offset
+
+        if not point_ids:
+            raise LookupError(
+                f"Documento '{document_id}' não encontrado na collection '{collection_name}'."
+            )
+
+        self._client.delete(
+            collection_name=collection_name,
+            points_selector=point_ids,
+        )
+        return len(point_ids)
+
     def upsert_chunks(self, collection_name: str, points: list[dict]) -> None:
         if not self.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' não encontrada.")
         self._client.upsert(
             collection_name=collection_name,
             points=[
-                PointStruct(id=p["id"], vector=p["vector"], payload=p["payload"])
-                for p in points
+                PointStruct(id=p["id"], vector=p["vector"], payload=p["payload"]) for p in points
             ],
         )

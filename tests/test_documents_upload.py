@@ -1,7 +1,6 @@
 from io import BytesIO
 from unittest.mock import MagicMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -41,10 +40,15 @@ def test_upload_parses_comma_separated_tags():
     captured = {}
 
     def fake_init(self):
-        self.ingest = lambda **kw: (captured.update(kw) or {
-            "document_id": "x", "filename": kw["filename"],
-            "collection_name": kw["collection_name"], "chunks": 1,
-        })
+        self.ingest = lambda **kw: (
+            captured.update(kw)
+            or {
+                "document_id": "x",
+                "filename": kw["filename"],
+                "collection_name": kw["collection_name"],
+                "chunks": 1,
+            }
+        )
 
     with patch(_INGEST_PATH, new=type("S", (), {"__init__": fake_init})):
         client.post(

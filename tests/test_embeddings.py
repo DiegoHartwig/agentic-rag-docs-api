@@ -35,10 +35,12 @@ def test_embed_text_calls_model():
 
 def test_embed_texts_calls_model():
     service, mock_model = _make_service()
-    mock_model.embed.return_value = iter([
-        np.array([0.1, 0.2]),
-        np.array([0.3, 0.4]),
-    ])
+    mock_model.embed.return_value = iter(
+        [
+            np.array([0.1, 0.2]),
+            np.array([0.3, 0.4]),
+        ]
+    )
 
     result = service.embed_texts(["texto um", "texto dois"])
 
