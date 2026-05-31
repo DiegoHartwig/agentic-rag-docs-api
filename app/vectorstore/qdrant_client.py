@@ -130,6 +130,36 @@ class QdrantCollectionClient:
         )
         return len(point_ids)
 
+    def search_similar_chunks(
+        self, collection_name: str, query_vector: list[float], limit: int = 5
+    ) -> list[dict]:
+        if not self.collection_exists(collection_name):
+            raise ValueError(f"Collection '{collection_name}' não encontrada.")
+
+        hits = self._client.search(
+            collection_name=collection_name,
+            query_vector=query_vector,
+            limit=limit,
+            with_payload=True,
+        )
+        results = []
+        for hit in hits:
+            payload = hit.payload or {}
+            results.append(
+                {
+                    "text": payload.get("text", ""),
+                    "score": hit.score,
+                    "document_id": payload.get("document_id", ""),
+                    "filename": payload.get("filename", ""),
+                    "collection_name": payload.get("collection_name", collection_name),
+                    "page": payload.get("page"),
+                    "chunk_index": payload.get("chunk_index"),
+                    "tags": payload.get("tags", []),
+                    "source_type": payload.get("source_type"),
+                }
+            )
+        return results
+
     def upsert_chunks(self, collection_name: str, points: list[dict]) -> None:
         if not self.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' não encontrada.")
